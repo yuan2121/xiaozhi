@@ -15,11 +15,13 @@
       <div class="content-panel">
         <div class="content-area">
           <el-card class="user-card" shadow="never">
-            <el-table ref="userTable" :data="userList" class="transparent-table">
+            <el-table ref="userTable" :data="userList" class="transparent-table" v-loading="loading"
+              element-loading-text="拼命加载中" element-loading-spinner="el-icon-loading"
+              element-loading-background="rgba(255, 255, 255, 0.7)">
               <el-table-column label="选择" align="center" width="120">
-                  <template slot-scope="scope">
-                      <el-checkbox v-model="scope.row.selected"></el-checkbox>
-                  </template>
+                <template slot-scope="scope">
+                  <el-checkbox v-model="scope.row.selected"></el-checkbox>
+                </template>
               </el-table-column>
               <el-table-column label="用户Id" prop="userid" align="center"></el-table-column>
               <el-table-column label="手机号码" prop="mobile" align="center"></el-table-column>
@@ -54,11 +56,7 @@
               </div>
               <div class="custom-pagination">
                 <el-select v-model="pageSize" @change="handlePageSizeChange" class="page-size-select">
-                  <el-option
-                    v-for="item in pageSizeOptions"
-                    :key="item"
-                    :label="`${item}条/页`"
-                    :value="item">
+                  <el-option v-for="item in pageSizeOptions" :key="item" :label="`${item}条/页`" :value="item">
                   </el-option>
                 </el-select>
 
@@ -83,16 +81,19 @@
     </div>
 
     <view-password-dialog :visible.sync="showViewPassword" :password="currentPassword" />
+    <el-footer>
+      <version-footer />
+    </el-footer>
   </div>
 </template>
 
 <script>
 import Api from "@/apis/api";
 import HeaderBar from "@/components/HeaderBar.vue";
+import VersionFooter from "@/components/VersionFooter.vue";
 import ViewPasswordDialog from "@/components/ViewPasswordDialog.vue";
-
 export default {
-  components: { HeaderBar, ViewPasswordDialog },
+  components: { HeaderBar, ViewPasswordDialog, VersionFooter },
   data() {
     return {
       showViewPassword: false,
@@ -103,7 +104,8 @@ export default {
       currentPage: 1,
       pageSize: 10,
       total: 0,
-      isAllSelected: false
+      isAllSelected: false,
+      loading: false,
     };
   },
   created() {
@@ -130,39 +132,41 @@ export default {
     },
   },
   methods: {
-     handlePageSizeChange(val) {
+    handlePageSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
       this.fetchUsers();
     },
 
     fetchUsers() {
-        Api.admin.getUserList(
-            {
-                page: this.currentPage,
-                limit: this.pageSize,
-                mobile: this.searchPhone,
-            },
-            ({ data }) => {
-                if (data.code === 0) {
-                    this.userList = data.data.list.map(item => ({
-                        ...item,
-                        selected: false
-                    }));
-                    this.total = data.data.total;
-                }
-            }
-        );
+      this.loading = true;
+      Api.admin.getUserList(
+        {
+          page: this.currentPage,
+          limit: this.pageSize,
+          mobile: this.searchPhone,
+        },
+        ({ data }) => {
+          this.loading = false; // 结束加载
+          if (data.code === 0) {
+            this.userList = data.data.list.map(item => ({
+              ...item,
+              selected: false
+            }));
+            this.total = data.data.total;
+          }
+        }
+      );
     },
     handleSearch() {
       this.currentPage = 1;
       this.fetchUsers();
     },
     handleSelectAll() {
-        this.isAllSelected = !this.isAllSelected;
-        this.userList.forEach(row => {
-            row.selected = this.isAllSelected;
-        });
+      this.isAllSelected = !this.isAllSelected;
+      this.userList.forEach(row => {
+        row.selected = this.isAllSelected;
+      });
     },
     batchDelete() {
       const selectedUsers = this.userList.filter(user => user.selected);
@@ -230,12 +234,12 @@ export default {
         });
     },
     batchEnable() {
-        const selectedUsers = this.userList.filter(user => user.selected);
-        this.handleChangeStatus(selectedUsers, 1);
+      const selectedUsers = this.userList.filter(user => user.selected);
+      this.handleChangeStatus(selectedUsers, 1);
     },
     batchDisable() {
-        const selectedUsers = this.userList.filter(user => user.selected);
-        this.handleChangeStatus(selectedUsers, 0);
+      const selectedUsers = this.userList.filter(user => user.selected);
+      this.handleChangeStatus(selectedUsers, 0);
     },
     resetPassword(row) {
       this.$confirm("重置后将会生成新密码，是否继续？", "提示", {
@@ -415,12 +419,20 @@ export default {
 
 .user-card {
   background: white;
-  border: none;
-  box-shadow: none;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  flex: 1;
+  border: none;
+  box-shadow: none;
   overflow: hidden;
+
+  ::v-deep .el-card__body {
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+  }
 }
 
 .table_bottom {
@@ -555,6 +567,7 @@ export default {
   width: 100%;
   display: flex;
   flex-direction: column;
+
   .el-table__body-wrapper {
     flex: 1;
     overflow-y: auto;
@@ -630,47 +643,47 @@ export default {
 }
 
 .page-size-select {
-    width: 100px;
-    margin-right: 10px;
+  width: 100px;
+  margin-right: 10px;
 
-    :deep(.el-input__inner) {
-        height: 32px;
-        line-height: 32px;
-        border-radius: 4px;
-        border: 1px solid #e4e7ed;
-        background: #dee7ff;
-        color: #606266;
-        font-size: 14px;
-    }
+  :deep(.el-input__inner) {
+    height: 32px;
+    line-height: 32px;
+    border-radius: 4px;
+    border: 1px solid #e4e7ed;
+    background: #dee7ff;
+    color: #606266;
+    font-size: 14px;
+  }
 
-    :deep(.el-input__suffix) {
-        right: 6px;
-        width: 15px;
-        height: 20px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        top: 6px;
-        border-radius: 4px;
-    }
+  :deep(.el-input__suffix) {
+    right: 6px;
+    width: 15px;
+    height: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    top: 6px;
+    border-radius: 4px;
+  }
 
-    :deep(.el-input__suffix-inner) {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-    }
+  :deep(.el-input__suffix-inner) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+  }
 
-    :deep(.el-icon-arrow-up:before) {
-        content: "";
-        display: inline-block;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 9px solid #606266;
-        position: relative;
-        transform: rotate(0deg);
-        transition: transform 0.3s;
-    }
+  :deep(.el-icon-arrow-up:before) {
+    content: "";
+    display: inline-block;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 9px solid #606266;
+    position: relative;
+    transform: rotate(0deg);
+    transition: transform 0.3s;
+  }
 }
 
 .el-table {
@@ -682,5 +695,23 @@ export default {
   }
 }
 
+:deep(.el-loading-mask) {
+  background-color: rgba(255, 255, 255, 0.6) !important;
+  backdrop-filter: blur(2px);
+}
 
+:deep(.el-loading-spinner .circular) {
+  width: 28px;
+  height: 28px;
+}
+
+:deep(.el-loading-spinner .path) {
+  stroke: #6b8cff;
+}
+
+:deep(.el-loading-text) {
+  color: #6b8cff !important;
+  font-size: 14px;
+  margin-top: 8px;
+}
 </style>

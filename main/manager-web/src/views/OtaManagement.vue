@@ -3,9 +3,9 @@
         <HeaderBar />
 
         <div class="operation-bar">
-            <h2 class="page-title">参数管理</h2>
+            <h2 class="page-title">固件管理</h2>
             <div class="right-operations">
-                <el-input placeholder="请输入参数编码查询" v-model="searchCode" class="search-input"
+                <el-input placeholder="请输入固件名称查询" v-model="searchName" class="search-input"
                     @keyup.enter.native="handleSearch" clearable />
                 <el-button class="btn-search" @click="handleSearch">搜索</el-button>
             </div>
@@ -15,21 +15,43 @@
             <div class="content-panel">
                 <div class="content-area">
                     <el-card class="params-card" shadow="never">
-                        <el-table ref="paramsTable" :data="paramsList" class="transparent-table" v-loading="loading"
-                            element-loading-text="拼命加载中" element-loading-spinner="el-icon-loading"
-                            element-loading-background="rgba(255, 255, 255, 0.7)"
-                            :header-cell-class-name="headerCellClassName">
+                            <el-table
+                                ref="paramsTable"
+                                :data="paramsList"
+                                class="transparent-table"
+                                v-loading="loading"
+                                element-loading-text="拼命加载中"
+                                element-loading-spinner="el-icon-loading"
+                                element-loading-background="rgba(255, 255, 255, 0.7)"
+                                :header-cell-class-name="headerCellClassName">
                             <el-table-column label="选择" align="center" width="120">
                                 <template slot-scope="scope">
                                     <el-checkbox v-model="scope.row.selected"></el-checkbox>
                                 </template>
                             </el-table-column>
-                            <el-table-column label="参数编码" prop="paramCode" align="center"></el-table-column>
-                            <el-table-column label="参数值" prop="paramValue" align="center"
+                            <el-table-column label="固件名称" prop="firmwareName" align="center"></el-table-column>
+                            <el-table-column label="固件类型" prop="type" align="center">
+                                <template slot-scope="scope">
+                                    {{ getFirmwareTypeName(scope.row.type) }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="版本号" prop="version" align="center"></el-table-column>
+                            <el-table-column label="文件大小" prop="size" align="center">
+                                <template slot-scope="scope">
+                                    {{ formatFileSize(scope.row.size) }}
+                                </template>
+                            </el-table-column>
+                            <el-table-column label="备注" prop="remark" align="center"
                                 show-overflow-tooltip></el-table-column>
-                            <el-table-column label="备注" prop="remark" align="center"></el-table-column>
+                            <el-table-column label="创建时间" prop="createDate" align="center">
+                                <template slot-scope="scope">
+                                    {{ formatDate(scope.row.createDate) }}
+                                </template>
+                            </el-table-column>
                             <el-table-column label="操作" align="center">
                                 <template slot-scope="scope">
+                                    <el-button size="mini" type="text"
+                                        @click="downloadFirmware(scope.row)">下载</el-button>
                                     <el-button size="mini" type="text" @click="editParam(scope.row)">编辑</el-button>
                                     <el-button size="mini" type="text" @click="deleteParam(scope.row)">删除</el-button>
                                 </template>
@@ -41,7 +63,8 @@
                                 <el-button size="mini" type="primary" class="select-all-btn" @click="handleSelectAll">
                                     {{ isAllSelected ? '取消全选' : '全选' }}
                                 </el-button>
-                                <el-button size="mini" type="success" @click="showAddDialog">新增</el-button>
+                                <el-button size="mini" type="success" @click="showAddDialog"
+                                    style="background: #5bc98c;border: None;">新增</el-button>
                                 <el-button size="mini" type="danger" icon="el-icon-delete"
                                     @click="deleteSelectedParams">删除</el-button>
                             </div>
@@ -72,8 +95,8 @@
             </div>
         </div>
 
-        <!-- 新增/编辑参数对话框 -->
-        <param-dialog :title="dialogTitle" :visible.sync="dialogVisible" :form="paramForm" @submit="handleSubmit"
+        <!-- 新增/编辑固件对话框 -->
+        <firmware-dialog :title="dialogTitle" :visible.sync="dialogVisible" :form="firmwareForm" @submit="handleSubmit"
             @cancel="dialogVisible = false" />
         <el-footer>
             <version-footer />
@@ -83,34 +106,40 @@
 
 <script>
 import Api from "@/apis/api";
+import FirmwareDialog from "@/components/FirmwareDialog.vue";
 import HeaderBar from "@/components/HeaderBar.vue";
-import ParamDialog from "@/components/ParamDialog.vue";
 import VersionFooter from "@/components/VersionFooter.vue";
+import { FIRMWARE_TYPES } from "@/utils";
+import { formatDate, formatFileSize } from "@/utils/format";
+
 export default {
-    components: { HeaderBar, ParamDialog, VersionFooter },
+    components: { HeaderBar, FirmwareDialog, VersionFooter },
     data() {
         return {
-            searchCode: "",
-            paramsList: [],
-            currentPage: 1,
+            searchName: "",
             loading: false,
+            paramsList: [],
+            firmwareList: [],
+            currentPage: 1,
             pageSize: 10,
             pageSizeOptions: [10, 20, 50, 100],
             total: 0,
             dialogVisible: false,
-            dialogTitle: "新增参数",
+            dialogTitle: "新增固件",
             isAllSelected: false,
-            paramForm: {
+            firmwareForm: {
                 id: null,
-                paramCode: "",
-                paramValue: "",
-                remark: ""
+                firmwareName: "",
+                type: "",
+                version: "",
+                size: 0,
+                remark: "",
+                firmwarePath: ""
             },
         };
     },
     created() {
-        this.fetchParams();
-
+        this.fetchFirmwareList();
     },
 
     computed: {
@@ -137,94 +166,118 @@ export default {
         handlePageSizeChange(val) {
             this.pageSize = val;
             this.currentPage = 1;
-            this.fetchParams();
+            this.fetchFirmwareList();
         },
-        fetchParams() {
+        fetchFirmwareList() {
             this.loading = true;
-            Api.admin.getParamsList(
-                {
-                    page: this.currentPage,
-                    limit: this.pageSize,
-                    paramCode: this.searchCode,
-                },
-                ({ data }) => {
-                    this.loading = false;
-                    if (data.code === 0) {
-                        this.paramsList = data.data.list.map(item => ({
-                            ...item,
-                            selected: false
-                        }));
-                        this.total = data.data.total;
-                    } else {
-                        this.$message.error({
-                            message: data.msg || '获取参数列表失败',
-                            showClose: true
-                        });
-                    }
+            const params = {
+                pageNum: this.currentPage,
+                pageSize: this.pageSize,
+                firmwareName: this.searchName || "",
+                orderField: "create_date",
+                order: "desc"
+            };
+            Api.ota.getOtaList(params, (res) => {
+                this.loading = false;
+                res = res.data
+                if (res.code === 0) {
+                    this.firmwareList = res.data.list.map(item => ({
+                        ...item,
+                        selected: false
+                    }));
+                    this.paramsList = this.firmwareList;
+                    this.total = res.data.total || 0;
+                } else {
+                    this.firmwareList = [];
+                    this.paramsList = [];
+                    this.total = 0;
+                    this.$message.error({
+                        message: res?.data?.msg || '获取固件列表失败',
+                        showClose: true
+                    });
                 }
-            );
+            });
         },
         handleSearch() {
             this.currentPage = 1;
-            this.fetchParams();
+            this.fetchFirmwareList();
         },
         handleSelectAll() {
             this.isAllSelected = !this.isAllSelected;
-            this.paramsList.forEach(row => {
+            this.firmwareList.forEach(row => {
                 row.selected = this.isAllSelected;
             });
         },
         showAddDialog() {
-            this.dialogTitle = "新增参数";
-            this.paramForm = {
+            this.dialogTitle = "新增固件";
+            // 完全重置表单数据
+            this.firmwareForm = {
                 id: null,
-                paramCode: "",
-                paramValue: "",
-                remark: ""
+                firmwareName: "",
+                type: "",
+                version: "",
+                size: 0,
+                remark: "",
+                firmwarePath: ""
             };
+            this.$nextTick(() => {
+                // 重置表单的校验状态
+                if (this.$refs.firmwareDialog && this.$refs.firmwareDialog.$refs.form) {
+                    this.$refs.firmwareDialog.$refs.form.clearValidate();
+                }
+            });
             this.dialogVisible = true;
         },
         editParam(row) {
-            this.dialogTitle = "编辑参数";
-            this.paramForm = { ...row };
+            this.dialogTitle = "编辑固件";
+            this.firmwareForm = { ...row };
             this.dialogVisible = true;
         },
-
-        handleSubmit({ form, done }) {
+        handleSubmit(form) {
             if (form.id) {
                 // 编辑
-                Api.admin.updateParam(form, ({ data }) => {
-                    if (data.code === 0) {
+                Api.ota.updateOta(form.id, form, (res) => {
+                    res = res.data;
+                    if (res.code === 0) {
                         this.$message.success({
                             message: "修改成功",
                             showClose: true
                         });
                         this.dialogVisible = false;
-                        this.fetchParams();
+                        this.fetchFirmwareList();
+                    } else {
+                        this.$message.error({
+                            message: res.msg || "修改失败",
+                            showClose: true
+                        });
                     }
-                    done && done();
                 });
             } else {
                 // 新增
-                Api.admin.addParam(form, ({ data }) => {
-                    if (data.code === 0) {
+                Api.ota.saveOta(form, (res) => {
+                    res = res.data;
+                    if (res.code === 0) {
                         this.$message.success({
                             message: "新增成功",
                             showClose: true
                         });
                         this.dialogVisible = false;
-                        this.fetchParams();
+                        this.fetchFirmwareList();
+                    } else {
+                        this.$message.error({
+                            message: res.msg || "新增失败",
+                            showClose: true
+                        });
                     }
-                    done && done();
                 });
             }
         },
 
         deleteSelectedParams() {
-            const selectedRows = this.paramsList.filter(row => row.selected);
+            const selectedRows = this.firmwareList.filter(row => row.selected);
             if (selectedRows.length === 0) {
                 this.$message.warning({
-                    message: "请先选择需要删除的参数",
+                    message: "请先选择需要删除的固件",
                     showClose: true
                 });
                 return;
@@ -244,14 +297,14 @@ export default {
             }
 
             const paramCount = params.length;
-            this.$confirm(`确定要删除选中的${paramCount}个参数吗？`, '警告', {
+            this.$confirm(`确定要删除选中的${paramCount}个固件吗？`, '警告', {
                 confirmButtonText: '确定',
                 cancelButtonText: '取消',
                 type: 'warning',
                 distinguishCancelAndClose: true
             }).then(() => {
                 const ids = params.map(param => param.id);
-                if (ids.some(id => isNaN(id))) {
+                if (ids.some(id => !id)) {
                     this.$message.error({
                         message: '存在无效的参数ID',
                         showClose: true
@@ -259,16 +312,17 @@ export default {
                     return;
                 }
 
-                Api.admin.deleteParam(ids, ({ data }) => {
-                    if (data.code === 0) {
+                Api.ota.deleteOta(ids, (res) => {
+                    res = res.data;
+                    if (res.code === 0) {
                         this.$message.success({
-                            message: `成功删除${paramCount}个参数`,
+                            message: `成功删除${paramCount}个固件`,
                             showClose: true
                         });
-                        this.fetchParams();
+                        this.fetchFirmwareList();
                     } else {
                         this.$message.error({
-                            message: data.msg || '删除失败，请重试',
+                            message: res.msg || '删除失败，请重试',
                             showClose: true
                         });
                     }
@@ -297,24 +351,46 @@ export default {
         },
         goFirst() {
             this.currentPage = 1;
-            this.fetchParams();
+            this.fetchFirmwareList();
         },
         goPrev() {
             if (this.currentPage > 1) {
                 this.currentPage--;
-                this.fetchParams();
+                this.fetchFirmwareList();
             }
         },
         goNext() {
             if (this.currentPage < this.pageCount) {
                 this.currentPage++;
-                this.fetchParams();
+                this.fetchFirmwareList();
             }
         },
         goToPage(page) {
             this.currentPage = page;
-            this.fetchParams();
-        }
+            this.fetchFirmwareList();
+        },
+        downloadFirmware(firmware) {
+            if (!firmware || !firmware.id) {
+                this.$message.error('固件信息不完整');
+                return;
+            }
+            // 先获取下载链接
+            Api.ota.getDownloadUrl(firmware.id, (res) => {
+                if (res.data.code === 0) {
+                    const uuid = res.data.data;
+                    const baseUrl = process.env.VUE_APP_API_BASE_URL || '';
+                    window.open(`${window.location.origin}${baseUrl}/otaMag/download/${uuid}`);
+                } else {
+                    this.$message.error('获取下载链接失败');
+                }
+            });
+        },
+        formatDate,
+        formatFileSize,
+        getFirmwareTypeName(type) {
+            const firmwareType = FIRMWARE_TYPES.find(item => item.key === type);
+            return firmwareType ? firmwareType.name : type;
+        },
     },
 };
 </script>
@@ -458,7 +534,7 @@ export default {
 .custom-pagination {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 5px;
 
     .el-select {
         margin-right: 8px;
@@ -515,104 +591,12 @@ export default {
             background: #6d7cf5 !important;
         }
     }
-
-    .total-text {
-        color: #909399;
-        font-size: 14px;
-        margin-left: 10px;
-    }
 }
 
-:deep(.transparent-table) {
-    background: white;
-    flex: 1;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-
-    .el-table__body-wrapper {
-        flex: 1;
-        overflow-y: auto;
-        max-height: none !important;
-    }
-
-    .el-table__header-wrapper {
-        flex-shrink: 0;
-    }
-
-    .el-table__header th {
-        background: white !important;
-        color: black;
-    }
-
-    &::before {
-        display: none;
-    }
-
-    .el-table__body tr {
-        background-color: white;
-
-        td {
-            border-top: 1px solid rgba(0, 0, 0, 0.04);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-        }
-    }
-}
-
-
-:deep(.el-checkbox__inner) {
-    background-color: #eeeeee !important;
-    border-color: #cccccc !important;
-}
-
-:deep(.el-checkbox__inner:hover) {
-    border-color: #cccccc !important;
-}
-
-:deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
-    background-color: #5f70f3 !important;
-    border-color: #5f70f3 !important;
-}
-
-@media (min-width: 1144px) {
-    .table_bottom {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 40px;
-    }
-
-    :deep(.transparent-table) {
-        .el-table__body tr {
-            td {
-                padding-top: 16px;
-                padding-bottom: 16px;
-            }
-
-            &+tr {
-                margin-top: 10px;
-            }
-        }
-    }
-}
-
-:deep(.el-table .el-button--text) {
-    color: #7079aa;
-}
-
-:deep(.el-table .el-button--text:hover) {
-    color: #5a64b5;
-}
-
-.el-button--success {
-    background: #5bc98c;
-    color: white;
-}
-
-:deep(.el-table .cell) {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.total-text {
+    margin-left: 10px;
+    color: #606266;
+    font-size: 14px;
 }
 
 .page-size-select {
@@ -659,10 +643,84 @@ export default {
     }
 }
 
-:deep(.el-table) {
+:deep(.transparent-table) {
+    background: white;
+    flex: 1;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+
     .el-table__body-wrapper {
-        transition: height 0.3s ease;
+        flex: 1;
+        overflow-y: auto;
+        max-height: none !important;
     }
+
+    .el-table__header-wrapper {
+        flex-shrink: 0;
+    }
+
+    .el-table__header th {
+        background: white !important;
+        color: black;
+        font-weight: 600;
+        height: 40px;
+        padding: 8px 0;
+        font-size: 14px;
+        border-bottom: 1px solid #e4e7ed;
+    }
+
+    .el-table__body tr {
+        background-color: white;
+
+        td {
+            border-top: 1px solid rgba(0, 0, 0, 0.04);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            padding: 8px 0;
+            height: 40px;
+            color: #606266;
+            font-size: 14px;
+        }
+    }
+
+    .el-table__row:hover>td {
+        background-color: #f5f7fa !important;
+    }
+
+    &::before {
+        display: none;
+    }
+}
+
+:deep(.el-table .el-button--text) {
+    color: #7079aa !important;
+}
+
+:deep(.el-table .el-button--text:hover) {
+    color: #5a64b5 !important;
+}
+
+:deep(.el-checkbox__inner) {
+    background-color: #eeeeee !important;
+    border-color: #cccccc !important;
+}
+
+:deep(.el-checkbox__inner:hover) {
+    border-color: #cccccc !important;
+}
+
+:deep(.el-checkbox__input.is-checked .el-checkbox__inner) {
+    background-color: #5f70f3 !important;
+    border-color: #5f70f3 !important;
+}
+
+:deep(.el-loading-mask) {
+    background-color: rgba(255, 255, 255, 0.6) !important;
+    backdrop-filter: blur(2px);
+}
+
+:deep(.el-loading-spinner .path) {
+    stroke: #6b8cff;
 }
 
 .el-table {
@@ -674,23 +732,25 @@ export default {
     }
 }
 
-:deep(.el-loading-mask) {
-    background-color: rgba(255, 255, 255, 0.6) !important;
-    backdrop-filter: blur(2px);
-}
+@media (min-width: 1144px) {
+    .table_bottom {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 40px;
+    }
 
-:deep(.el-loading-spinner .circular) {
-    width: 28px;
-    height: 28px;
-}
+    :deep(.transparent-table) {
+        .el-table__body tr {
+            td {
+                padding-top: 16px;
+                padding-bottom: 16px;
+            }
 
-:deep(.el-loading-spinner .path) {
-    stroke: #6b8cff;
-}
-
-:deep(.el-loading-text) {
-    color: #6b8cff !important;
-    font-size: 14px;
-    margin-top: 8px;
+            &+tr {
+                margin-top: 10px;
+            }
+        }
+    }
 }
 </style>
