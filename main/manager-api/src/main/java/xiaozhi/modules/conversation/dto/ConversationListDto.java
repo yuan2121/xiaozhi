@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 
@@ -17,6 +18,6 @@ public class ConversationListDto {
     /** 代理/机器人 ID */
     private String id;
     private String agentId;
-    private LocalDateTime updateDate;
+    private Date updateDate;
     private int messageCount;
 }

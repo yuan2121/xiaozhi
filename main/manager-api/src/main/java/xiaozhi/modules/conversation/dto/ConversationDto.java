@@ -1,11 +1,15 @@
 package xiaozhi.modules.conversation.dto;
 
+import com.baomidou.mybatisplus.annotation.FieldFill;
+import com.baomidou.mybatisplus.annotation.TableField;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * 会话传输对象，与 ConversationEntity 字段一一对应
@@ -33,11 +37,16 @@ public class ConversationDto {
     private Long creator;
 
     /** 创建时间字符串，例如 "2025-04-27 15:30:00" */
-    private LocalDateTime createTime;
+    @Schema(description = "创建时间")
+    @TableField(fill = FieldFill.INSERT)
+    private Date createDate;
 
     /** 更新人 */
     private Long updater;
 
-    /** 更新时间字符串，例如 "2025-04-27 15:30:00" */
-    private LocalDateTime updateTime;
+    @Schema(description = "更新时间")
+    @TableField(fill = FieldFill.UPDATE)
+    private Date updateDate;
+
+
 }

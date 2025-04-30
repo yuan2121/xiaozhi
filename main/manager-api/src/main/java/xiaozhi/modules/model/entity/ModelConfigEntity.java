@@ -16,48 +16,7 @@ import lombok.Data;
 @Data
 @TableName(value = "ai_model_config", autoResultMap = true)
 @Schema(description = "模型配置表")
-public class
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-ModelConfigEntity {
+public class ModelConfigEntity {
 
     @TableId(type = IdType.ASSIGN_UUID)
     @Schema(description = "主键")

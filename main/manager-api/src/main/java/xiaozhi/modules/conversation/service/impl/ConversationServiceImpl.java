@@ -42,7 +42,6 @@ public class ConversationServiceImpl extends BaseServiceImpl<ConversationDao, Co
     public boolean update(ConversationDto conversation) {
         ConversationEntity entity = new ConversationEntity();
         BeanUtils.copyProperties(conversation, entity);
-        // BaseServiceImpl 提供了 updateById 方法
         return updateById(entity);
     }
 
@@ -55,14 +54,6 @@ public class ConversationServiceImpl extends BaseServiceImpl<ConversationDao, Co
         }
         ConversationDto dto = new ConversationDto();
         BeanUtils.copyProperties(entity, dto);
-        // 手动映射名称或类型不一致的字段
-        dto.setUserId(entity.getUserId());
-        dto.setDeviceId(entity.getDeviceId());
-        dto.setMessageCount(entity.getMessageCount());
-        dto.setCreator(entity.getCreator());
-        dto.setCreateTime(entity.getCreateDate());
-        dto.setUpdater(entity.getUpdater());
-        dto.setUpdateTime(entity.getUpdateDate());
         return dto;
     }
 
@@ -83,35 +74,4 @@ public class ConversationServiceImpl extends BaseServiceImpl<ConversationDao, Co
         }).collect(Collectors.toList());
     }
 
-//    @Override
-//    public PageData<ConversationDto> page(Map<String, Object> params) {
-//        // 从 BaseServiceImpl 获取分页对象
-//        IPage<ConversationEntity> page = getPage(params);
-//        QueryWrapper<ConversationEntity> wrapper = new QueryWrapper<>();
-//        if (params.get("agentId") != null) {
-//            wrapper.eq("agent_id", params.get("agentId"));
-//        }
-//        if (params.get("userId") != null) {
-//            wrapper.eq("user_id", params.get("userId"));
-//        }
-//        // 执行分页查询
-//        conversationDao.selectPage(page, wrapper);
-//
-//        // 转 DTO 列表
-//        List<ConversationDto> dtoList = page.getRecords().stream().map(entity -> {
-//            ConversationDto dto = new ConversationDto();
-//            BeanUtils.copyProperties(entity, dto);
-//            dto.setUserId(entity.getUserId());
-//            dto.setDeviceId(entity.getDeviceId());
-//            dto.setMessageCount(entity.getMessageCount());
-//            dto.setCreator(entity.getCreator());
-//            dto.setCreateTime(entity.getCreateDate());
-//            dto.setUpdater(entity.getUpdater());
-//            dto.setUpdateTime(entity.getUpdateDate());
-//            return dto;
-//        }).collect(Collectors.toList());
-//
-//        // 组装 PageData，只传 list 和 total
-//        return new PageData<>(dtoList, page.getTotal());
-//    }
 }

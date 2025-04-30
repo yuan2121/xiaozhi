@@ -1,9 +1,6 @@
 package xiaozhi.modules.security.oauth2;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 
 import org.apache.commons.lang3.StringUtils;
 import org.apache.shiro.authc.AuthenticationException;
@@ -59,20 +56,20 @@ public class Oauth2Filter extends AuthenticatingFilter {
         // 获取请求token，如果token不存在，直接返回401
         String token = getRequestToken((HttpServletRequest) request);
 
-//        if (StringUtils.isBlank(token)) {
-//            logger.warn("onAccessDenied:token is empty");
-//
-//            HttpServletResponse httpResponse = (HttpServletResponse) response;
-//            httpResponse.setContentType("application/json;charset=utf-8");
-//            httpResponse.setHeader("Access-Control-Allow-Credentials", "true");
-//            httpResponse.setHeader("Access-Control-Allow-Origin", HttpContextUtils.getOrigin());
-//
-//            String json = JsonUtils.toJsonString(new Result<Void>().error(ErrorCode.UNAUTHORIZED));
-//
-//            httpResponse.getWriter().print(json);
-//
-//            return false;
-//        }
+        if (StringUtils.isBlank(token)) {
+            logger.warn("onAccessDenied:token is empty");
+
+            HttpServletResponse httpResponse = (HttpServletResponse) response;
+            httpResponse.setContentType("application/json;charset=utf-8");
+            httpResponse.setHeader("Access-Control-Allow-Credentials", "true");
+            httpResponse.setHeader("Access-Control-Allow-Origin", HttpContextUtils.getOrigin());
+
+            String json = JsonUtils.toJsonString(new Result<Void>().error(ErrorCode.UNAUTHORIZED));
+
+            httpResponse.getWriter().print(json);
+
+            return false;
+        }
 
         return executeLogin(request, response);
     }

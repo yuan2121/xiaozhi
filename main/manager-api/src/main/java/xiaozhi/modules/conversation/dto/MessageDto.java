@@ -6,6 +6,7 @@ import lombok.NoArgsConstructor;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * 会话传输对象，与 ConversationEntity 字段一一对应
@@ -27,7 +28,7 @@ public class MessageDto {
     private String totalMs;
     private String completionMs;
     private Long creator;
-    private LocalDateTime createDate;
+    private Date createDate;
     private Long updater;
-    private LocalDateTime updateDate;
+    private Date updateDate;
 }
