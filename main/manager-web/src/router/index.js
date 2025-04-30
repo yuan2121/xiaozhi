@@ -80,6 +80,18 @@ const routes = [
       title: '参数管理'
     }
   },
+  // 对话历史页面路由
+  {
+    path: '/conversation-history',
+    name: 'ConversationHistory',
+    component: function () {
+      return import('../views/ConversationHistory.vue')
+    },
+    meta: { 
+      requiresAuth: true,
+      title: '对话历史'
+    }
+  },
 ]
 
 const router = new VueRouter({

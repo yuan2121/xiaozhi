@@ -32,6 +32,9 @@
       <div class="settings-btn" @click="handleDeviceManage">
         设备管理({{ device.deviceCount }})
       </div>
+      <div class="settings-btn" @click="handleConversationHistory">
+        对话历史
+      </div>
     </div>
     <div class="version-info">
       <div>最近对话：{{ device.lastConnectedAt }}</div>
@@ -57,6 +60,9 @@ export default {
     },
     handleDeviceManage() {
       this.$router.push({ path: '/device-management', query: { agentId: this.device.agentId } });
+    },
+    handleConversationHistory() {
+      this.$router.push({ path: '/conversation-history', query: { agentId: this.device.agentId } });
     }
   }
 }

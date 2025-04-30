@@ -80,6 +80,8 @@ public class ShiroConfig {
         filterMap.put("/user/register", "anon");
         filterMap.put("/config/server-base", "anon");
         filterMap.put("/config/agent-models", "anon");
+        filterMap.put("/conversation/**", "anon");
+        filterMap.put("/message/**", "anon");
         filterMap.put("/**", "oauth2");
         shiroFilter.setFilterChainDefinitionMap(filterMap);
 

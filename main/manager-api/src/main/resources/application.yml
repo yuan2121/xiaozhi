@@ -26,7 +26,6 @@ spring:
       enabled: true
   main:
     allow-bean-definition-overriding: true
-
 knife4j:
   enable: true
   basic:
