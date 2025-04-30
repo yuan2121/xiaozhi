@@ -85,6 +85,16 @@ public interface Constant {
     String SERVER_SECRET = "server.secret";
 
     /**
+     * websocket地址
+     */
+    String SERVER_WEBSOCKET = "server.websocket";
+
+    /**
+     * ota地址
+     */
+    String SERVER_OTA = "server.ota";
+
+    /**
      * 是否允许用户注册
      */
     String SERVER_ALLOW_USER_REGISTER = "server.allow_user_register";
@@ -163,4 +173,9 @@ public interface Constant {
             return value;
         }
     }
+
+    /**
+     * 版本号
+     */
+    public static final String VERSION = "0.3.13";
 }
