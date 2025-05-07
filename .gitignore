@@ -147,6 +147,7 @@ tmp
 main/xiaozhi-server/data
 main/xiaozhi-server/config/assets/wakeup_words.*
 main/manager-web/node_modules
+main/manager-web/.idea
 .config.yaml
 .secrets.yaml
 .private_config.yaml
