@@ -14,7 +14,7 @@ spring:
       driver-class-name: com.mysql.cj.jdbc.Driver
       url: jdbc:mysql://127.0.0.1:3306/xiaozhi_esp32_server?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai&nullCatalogMeansCurrent=true
       username: root
-      password: gny66886688
+      password: 1qaz2wsx
       initial-size: 10
       max-active: 100
       min-idle: 10
