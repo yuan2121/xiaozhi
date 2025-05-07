@@ -27,7 +27,7 @@
         设备管理({{ device.deviceCount }})
       </div>
       <div class="settings-btn" @click="handleHistory">
-        历史对话({{ device.deviceCount }})
+        历史对话({{ device.chatCount }})
       </div>
     </div>
     <div class="version-info">
