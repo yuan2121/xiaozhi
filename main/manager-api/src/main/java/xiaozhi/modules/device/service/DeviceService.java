@@ -24,6 +24,11 @@ public interface DeviceService extends BaseService<DeviceEntity> {
     List<DeviceEntity> getUserDevices(Long userId, String agentId);
 
     /**
+     * 获取所有设备列表，
+     */
+    List<DeviceEntity> getAllDevices();
+
+    /**
      * 解绑设备
      */
     void unbindDevice(Long userId, String deviceId);

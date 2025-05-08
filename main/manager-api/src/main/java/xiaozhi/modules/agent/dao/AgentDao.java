@@ -10,9 +10,17 @@ import xiaozhi.modules.agent.entity.AgentEntity;
 public interface AgentDao extends BaseDao<AgentEntity> {
     /**
      * 获取智能体的设备数量
-     * 
+     *
      * @param agentId 智能体ID
      * @return 设备数量
      */
     Integer getDeviceCountByAgentId(@Param("agentId") String agentId);
+
+    /**
+     * 获取智能体的设备数量
+     *
+     * @param agentId 智能体ID
+     * @return 设备数量
+     */
+    Integer getChatCountByAgentId(@Param("agentId") String agentId);
 }

@@ -1,5 +1,6 @@
 package xiaozhi.modules.device.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
@@ -20,11 +21,13 @@ import xiaozhi.common.redis.RedisKeys;
 import xiaozhi.common.redis.RedisUtils;
 import xiaozhi.common.user.UserDetail;
 import xiaozhi.common.utils.Result;
+import xiaozhi.modules.agent.service.AgentService;
 import xiaozhi.modules.device.dto.DeviceRegisterDTO;
 import xiaozhi.modules.device.dto.DeviceUnBindDTO;
 import xiaozhi.modules.device.entity.DeviceEntity;
 import xiaozhi.modules.device.service.DeviceService;
 import xiaozhi.modules.security.user.SecurityUser;
+import org.springframework.transaction.annotation.Transactional;
 
 @Tag(name = "设备管理")
 @AllArgsConstructor
@@ -32,6 +35,7 @@ import xiaozhi.modules.security.user.SecurityUser;
 @RequestMapping("/device")
 public class DeviceController {
     private final DeviceService deviceService;
+    private final AgentService agentService;
 
     private final RedisUtils redisUtils;
 
@@ -71,6 +75,15 @@ public class DeviceController {
         return new Result<List<DeviceEntity>>().ok(devices);
     }
 
+
+    @GetMapping("/getAll")
+    @Operation(summary = "获取所有设备")
+//    @RequiresPermissions("sys:role:normal")
+    public Result<List<DeviceEntity>> getAllDevices() {
+        List<DeviceEntity> devices = deviceService.getAllDevices();
+        return new Result<List<DeviceEntity>>().ok(devices);
+    }
+
     @PostMapping("/unbind")
     @Operation(summary = "解绑设备")
     @RequiresPermissions("sys:role:normal")
@@ -92,4 +105,36 @@ public class DeviceController {
         deviceService.updateById(entity);
         return new Result<Void>();
     }
+
+
+
+    @PutMapping("/updateBatchAgentId/{agentId}")
+    @Operation(summary = "批量更改设备的agentId")
+//    @RequiresPermissions("sys:role:normal")
+    @Transactional(rollbackFor = Exception.class) // 添加事务控制,防止错误id导致仅更新部分内容，产生数据不一致的问题
+    public Result<Void> updateBatchAgentId(@PathVariable String agentId, @RequestBody List<String> deviceIds) {
+        // 先检查 agentId 是否存在
+        if (agentService.getAgentById(agentId) == null) {
+            return new Result<Void>().error("agentId 不存在: " + agentId);
+        }
+
+        List<DeviceEntity> updateList = new ArrayList<>();
+
+        for (String deviceId : deviceIds) {
+            DeviceEntity entity = deviceService.selectById(deviceId);
+            if (entity == null) {
+                // 抛出异常，触发事务回滚
+                return new Result<Void>().error("device does not exist, ID: " + deviceId);
+            }
+            entity.setAgentId(agentId);
+            updateList.add(entity);
+        }
+
+        // 执行批量更新，MyBatis-Plus 默认分批（每批1000）
+        deviceService.updateBatchById(updateList);
+
+        return new Result<Void>().ok(null);
+    }
+
+
 }

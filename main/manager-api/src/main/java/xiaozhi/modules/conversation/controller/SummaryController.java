@@ -17,13 +17,22 @@ public class SummaryController {
     private SummaryService summaryService;
 
 
+    // 增
+    @Operation(summary = "新增摘要")
+    @PostMapping("/add")
+    public String add(@RequestBody SummaryDto summary) {
+        summaryService.add(summary);
+        return "success!";
+    }
+
     // 根据ID获取摘要
     @Operation(summary = "获取对话摘要")
     @GetMapping("/get/{chatId}")
     public SummaryDto getSummaryById(@PathVariable("chatId") String chatId) {
         SummaryEntity summaryEntity = summaryService.getSummaryByChatId(chatId);
         if (summaryEntity == null) {
-            throw new RuntimeException("对话摘要不存在: " + chatId); // 如果没有找到摘要，抛出异常
+//            throw new RuntimeException("对话摘要不存在: " + chatId); // 如果没有找到摘要，抛出异常
+            return null;
         }
 
         // 将 SummaryEntity 转换为 SummaryDto

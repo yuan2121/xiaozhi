@@ -35,4 +35,7 @@ public class AgentDTO {
 
     @Schema(description = "设备数量", example = "10")
     private Integer deviceCount;
+
+    @Schema(description = "chat数量", example = "5")
+    private Integer chatCount;
 }
