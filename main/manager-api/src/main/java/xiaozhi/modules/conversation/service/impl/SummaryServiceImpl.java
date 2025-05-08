@@ -1,10 +1,13 @@
 package xiaozhi.modules.conversation.service.impl;
 
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import xiaozhi.common.service.impl.BaseServiceImpl;
 import xiaozhi.modules.conversation.dao.SummaryDao;
+import xiaozhi.modules.conversation.dto.ConversationDto;
 import xiaozhi.modules.conversation.dto.SummaryDto;
+import xiaozhi.modules.conversation.entity.ConversationEntity;
 import xiaozhi.modules.conversation.entity.SummaryEntity;
 import xiaozhi.modules.conversation.service.SummaryService;
 
@@ -13,6 +16,17 @@ public class SummaryServiceImpl extends BaseServiceImpl<SummaryDao, SummaryEntit
 
     @Autowired
     private SummaryDao summaryDao;  // 注入 SummaryDao，它继承了 BaseDao
+
+    @Override
+    public String add(SummaryDto summaryDto) {
+        SummaryEntity summaryEntity = new SummaryEntity();
+        BeanUtils.copyProperties(summaryDto, summaryEntity);
+        int rows = summaryDao.insert(summaryEntity);
+        if (rows <= 0) {
+            throw new RuntimeException("新增会话失败");
+        }
+        return summaryEntity.getId();
+    }
 
     @Override
     public SummaryEntity getSummaryByChatId(String chatId) {
