@@ -5,4 +5,9 @@
     <select id="getDeviceCountByAgentId" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM ai_device WHERE agent_id = #{agentId}
     </select>
+
+    <!-- 获取智能体的chat数量 -->
+    <select id="getChatCountByAgentId" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM ai_chat_history WHERE agent_id = #{agentId}
+    </select>
 </mapper> 

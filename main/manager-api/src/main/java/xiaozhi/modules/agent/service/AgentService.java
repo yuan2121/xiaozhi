@@ -37,9 +37,17 @@ public interface AgentService extends BaseService<AgentEntity> {
 
     /**
      * 获取智能体的设备数量
-     * 
+     *
      * @param agentId 智能体ID
      * @return 设备数量
+     */
+    Integer getChatCountByAgentId(String agentId);
+
+    /**
+     * 获取智能体的对话数量
+     *
+     * @param agentId 智能体ID
+     * @return 对话数量
      */
     Integer getDeviceCountByAgentId(String agentId);
 }
