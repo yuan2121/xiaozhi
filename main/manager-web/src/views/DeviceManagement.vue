@@ -6,7 +6,7 @@
       <h2 class="page-title">设备管理</h2>
       <div class="right-operations">
         <el-input placeholder="请输入设备型号或Mac地址查询" v-model="searchKeyword" class="search-input"
-          @keyup.enter.native="handleSearch" clearable />
+                  @keyup.enter.native="handleSearch" clearable />
         <el-button class="btn-search" @click="handleSearch">搜索</el-button>
       </div>
     </div>
@@ -16,17 +16,20 @@
         <div class="content-area">
           <el-card class="device-card" shadow="never">
             <el-table
-              ref="deviceTable"
-              :data="paginatedDeviceList"
-              class="transparent-table"
-              :header-cell-class-name="headerCellClassName"
-              v-loading="loading"
-              element-loading-text="拼命加载中"
-              element-loading-spinner="el-icon-loading"
-              element-loading-background="rgba(255, 255, 255, 0.7)">
+                ref="deviceTable"
+                :data="paginatedDeviceList"
+                class="transparent-table"
+                :header-cell-class-name="headerCellClassName"
+                v-loading="loading"
+                element-loading-text="拼命加载中"
+                element-loading-spinner="el-icon-loading"
+                element-loading-background="rgba(255, 255, 255, 0.7)">
               <el-table-column label="选择" align="center" width="120">
                 <template slot-scope="scope">
-                  <el-checkbox v-model="scope.row.selected"></el-checkbox>
+    <el-checkbox
+      v-model="scope.row.selected"
+      @change="handleDeviceSelectionChange(scope.row.device_id, scope.row.selected)"
+    ></el-checkbox>
                 </template>
               </el-table-column>
               <el-table-column label="设备型号" prop="model" align="center">
@@ -41,20 +44,25 @@
               <el-table-column label="备注" align="center">
                 <template slot-scope="scope">
                   <el-input v-if="scope.row.isEdit" v-model="scope.row.remark" size="mini"
-                    @blur="stopEditRemark(scope.$index)"></el-input>
+                            @blur="stopEditRemark(scope.$index)"></el-input>
                   <span v-else>
                     <i v-if="!scope.row.remark" class="el-icon-edit"
-                      @click="startEditRemark(scope.$index, scope.row)"></i>
+                       @click="startEditRemark(scope.$index, scope.row)"></i>
                     <span v-else @click="startEditRemark(scope.$index, scope.row)">
                       {{ scope.row.remark }}
                     </span>
                   </span>
                 </template>
               </el-table-column>
+              <el-table-column label="所属智能体" align="center" v-if="showAllDevices">
+                <template slot-scope="scope">
+                  {{ scope.row.agentId }}
+                </template>
+              </el-table-column>
               <el-table-column label="OTA升级" align="center">
                 <template slot-scope="scope">
                   <el-switch v-model="scope.row.otaSwitch" size="mini" active-color="#13ce66"
-                    inactive-color="#ff4949"></el-switch>
+                             inactive-color="#ff4949"></el-switch>
                 </template>
               </el-table-column>
               <el-table-column label="操作" align="center">
@@ -74,6 +82,12 @@
                   新增
                 </el-button>
                 <el-button size="mini" type="danger" icon="el-icon-delete" @click="deleteSelected">解绑</el-button>
+                <el-button size="mini" type="info" class="show-all-btn" @click="toggleShowAllDevices">
+                  {{ showAllDevices ? '显示当前智能体' : '显示所有设备' }}
+                </el-button>
+                <el-button size="mini" type="warning" class="batch-migrate-btn" @click="batchMigrateDevices" :disabled="!showAllDevices">
+                  迁移至当前智能体
+                </el-button>
               </div>
               <div class="custom-pagination">
                 <el-select v-model="pageSize" @change="handlePageSizeChange" class="page-size-select">
@@ -83,7 +97,7 @@
                 <button class="pagination-btn" :disabled="currentPage === 1" @click="goFirst">首页</button>
                 <button class="pagination-btn" :disabled="currentPage === 1" @click="goPrev">上一页</button>
                 <button v-for="page in visiblePages" :key="page" class="pagination-btn"
-                  :class="{ active: page === currentPage }" @click="goToPage(page)">
+                        :class="{ active: page === currentPage }" @click="goToPage(page)">
                   {{ page }}
                 </button>
                 <button class="pagination-btn" :disabled="currentPage === pageCount" @click="goNext">下一页</button>
@@ -96,7 +110,19 @@
     </div>
 
     <AddDeviceDialog :visible.sync="addDeviceDialogVisible" :agent-id="currentAgentId"
-      @refresh="fetchBindDevices(currentAgentId)" />
+                     @refresh="fetchBindDevices(currentAgentId)" />
+
+    <el-dialog
+      title="迁移确认"
+      :visible.sync="migrateDialogVisible"
+      width="30%">
+      <p>确认将选中的 {{ selectedDevices.length }} 台设备迁移到当前智能体吗？</p>
+  <p v-if="selectedDeviceIds.length === 0" class="warning-text">请至少选择一台设备</p>
+      <span slot="footer" class="dialog-footer">
+        <el-button @click="migrateDialogVisible = false">取消</el-button>
+    <el-button type="primary" @click="confirmMigrate" :disabled="selectedDeviceIds.length === 0">确定</el-button>
+      </span>
+    </el-dialog>
 
   </div>
 </template>
@@ -112,7 +138,8 @@ export default {
   data() {
     return {
       addDeviceDialogVisible: false,
-      selectedDevices: [],
+      migrateDialogVisible: false,
+      selectedDeviceIds: [], // 修改: 使用ID数组来跟踪选中的设备
       isAllSelected: false,
       searchKeyword: "",
       activeSearchKeyword: "",
@@ -121,17 +148,22 @@ export default {
       pageSize: 10,
       pageSizeOptions: [10, 20, 50, 100],
       deviceList: [],
+      allDevicesList: [], // 存储所有设备的列表
       loading: false,
       userApi: null,
+      showAllDevices: false, // 新增：控制是否显示所有设备
     };
   },
   computed: {
     filteredDeviceList() {
       const keyword = this.activeSearchKeyword.toLowerCase();
-      if (!keyword) return this.deviceList;
-      return this.deviceList.filter(device =>
-        (device.model && device.model.toLowerCase().includes(keyword)) ||
-        (device.macAddress && device.macAddress.toLowerCase().includes(keyword))
+      const list = this.showAllDevices ? this.allDevicesList : this.deviceList;
+
+      if (!keyword) return list;
+
+      return list.filter(device =>
+          (device.model && device.model.toLowerCase().includes(keyword)) ||
+          (device.macAddress && device.macAddress.toLowerCase().includes(keyword))
       );
     },
 
@@ -140,9 +172,17 @@ export default {
       const end = start + this.pageSize;
       return this.filteredDeviceList.slice(start, end).map(item => ({
         ...item,
-        selected: false
+        // 根据设备ID判断是否选中
+        selected: this.selectedDeviceIds.includes(item.device_id)
       }));
     },
+
+    // 添加新的计算属性，获取选中的设备对象
+    selectedDevices() {
+      const sourceList = this.showAllDevices ? this.allDevicesList : this.deviceList;
+      return sourceList.filter(device => this.selectedDeviceIds.includes(device.device_id));
+    },
+
     pageCount() {
       return Math.ceil(this.filteredDeviceList.length / this.pageSize);
     },
@@ -169,10 +209,13 @@ export default {
     }
   },
   methods: {
+    //分页，当用户在分页条里切换每页条数时触发
     handlePageSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
     },
+
+
     handleSearch() {
       this.activeSearchKeyword = this.searchKeyword;
       this.currentPage = 1;
@@ -180,15 +223,24 @@ export default {
 
     handleSelectAll() {
       this.isAllSelected = !this.isAllSelected;
-      this.paginatedDeviceList.forEach(row => {
-        row.selected = this.isAllSelected;
-      });
-      this.selectedDevices = this.paginatedDeviceList.filter(device => device.selected);
+
+      // 更新当前页面设备的选中状态
+      if (this.isAllSelected) {
+        // 将当前页面的设备ID添加到选中列表
+        this.paginatedDeviceList.forEach(device => {
+          if (!this.selectedDeviceIds.includes(device.device_id)) {
+            this.selectedDeviceIds.push(device.device_id);
+          }
+        });
+      } else {
+        // 从选中列表中移除当前页面的设备ID
+        const currentPageIds = this.paginatedDeviceList.map(device => device.device_id);
+        this.selectedDeviceIds = this.selectedDeviceIds.filter(id => !currentPageIds.includes(id));
+      }
     },
 
     deleteSelected() {
-      this.selectedDevices = this.paginatedDeviceList.filter(device => device.selected);
-      if (this.selectedDevices.length === 0) {
+      if (this.selectedDeviceIds.length === 0) {
         this.$message.warning({
           message: '请至少选择一条记录',
           showClose: true
@@ -196,13 +248,12 @@ export default {
         return;
       }
 
-      this.$confirm(`确认要解绑选中的 ${this.selectedDevices.length} 台设备吗？`, '警告', {
+      this.$confirm(`确认要解绑选中的 ${this.selectedDeviceIds.length} 台设备吗？`, '警告', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
-        const deviceIds = this.selectedDevices.map(device => device.device_id);
-        this.batchUnbindDevices(deviceIds);
+        this.batchUnbindDevices(this.selectedDeviceIds);
       });
     },
 
@@ -220,31 +271,55 @@ export default {
       });
 
       Promise.all(promises)
-        .then(() => {
-          this.$message.success({
-            message: `成功解绑 ${deviceIds.length} 台设备`,
-            showClose: true
+          .then(() => {
+            this.$message.success({
+              message: `成功解绑 ${deviceIds.length} 台设备`,
+              showClose: true
+            });
+
+            if (this.showAllDevices) {
+              this.fetchAllDevices();
+            } else {
+              this.fetchBindDevices(this.currentAgentId);
+            }
+
+          this.selectedDeviceIds = [];
+            this.isAllSelected = false;
+          })
+          .catch(error => {
+            this.$message.error({
+              message: error || '批量解绑过程中出现错误',
+              showClose: true
+            });
           });
-          this.fetchBindDevices(this.currentAgentId);
-          this.selectedDevices = [];
-          this.isAllSelected = false;
-        })
-        .catch(error => {
-          this.$message.error({
-            message: error || '批量解绑过程中出现错误',
-            showClose: true
-          });
-        });
     },
 
     handleAddDevice() {
       this.addDeviceDialogVisible = true;
     },
     startEditRemark(index, row) {
-      this.deviceList[index].isEdit = true;
+      const targetList = this.showAllDevices ? this.allDevicesList : this.deviceList;
+      const deviceIndex = targetList.findIndex(device => device.device_id === row.device_id);
+      if (deviceIndex !== -1) {
+        if (this.showAllDevices) {
+          this.allDevicesList[deviceIndex].isEdit = true;
+        } else {
+          this.deviceList[deviceIndex].isEdit = true;
+        }
+      }
     },
     stopEditRemark(index) {
-      this.deviceList[index].isEdit = false;
+      const device = this.paginatedDeviceList[index];
+      const targetList = this.showAllDevices ? this.allDevicesList : this.deviceList;
+      const deviceIndex = targetList.findIndex(d => d.device_id === device.device_id);
+
+      if (deviceIndex !== -1) {
+        if (this.showAllDevices) {
+          this.allDevicesList[deviceIndex].isEdit = false;
+        } else {
+          this.deviceList[deviceIndex].isEdit = false;
+        }
+      }
     },
     handleUnbind(device_id) {
       this.$confirm('确认要解绑该设备吗？', '警告', {
@@ -258,7 +333,12 @@ export default {
               message: '设备解绑成功',
               showClose: true
             });
-            this.fetchBindDevices(this.$route.query.agentId);
+
+            if (this.showAllDevices) {
+              this.fetchAllDevices();
+            } else {
+              this.fetchBindDevices(this.currentAgentId);
+            }
           } else {
             this.$message.error({
               message: data.msg || '设备解绑失败',
@@ -295,32 +375,144 @@ export default {
       Api.device.getAgentBindDevices(agentId, ({ data }) => {
         this.loading = false;
         if (data.code === 0) {
-          this.deviceList = data.data.map(device => {
-            const bindDate = new Date(device.createDate);
-            const formattedBindTime = `${bindDate.getFullYear()}-${(bindDate.getMonth() + 1).toString().padStart(2, '0')}-${bindDate.getDate().toString().padStart(2, '0')} ${bindDate.getHours().toString().padStart(2, '0')}:${bindDate.getMinutes().toString().padStart(2, '0')}:${bindDate.getSeconds().toString().padStart(2, '0')}`;
-            let formattedLastConversation = '';
-            if (device.lastConnectedAt) {
-              const lastConvoDate = new Date(device.lastConnectedAt);
-              formattedLastConversation = `${lastConvoDate.getFullYear()}-${(lastConvoDate.getMonth() + 1).toString().padStart(2, '0')}-${lastConvoDate.getDate().toString().padStart(2, '0')} ${lastConvoDate.getHours().toString().padStart(2, '0')}:${lastConvoDate.getMinutes().toString().padStart(2, '0')}:${lastConvoDate.getSeconds().toString().padStart(2, '0')}`;
-            }
-            return {
-              device_id: device.id,
-              model: device.board,
-              firmwareVersion: device.appVersion,
-              macAddress: device.macAddress,
-              bindTime: formattedBindTime,
-              lastConversation: formattedLastConversation,
-              remark: device.alias,
-              isEdit: false,
-              otaSwitch: device.autoUpdate === 1,
-              rawBindTime: new Date(device.createDate).getTime()
-            };
-          })
-            .sort((a, b) => a.rawBindTime - b.rawBindTime);
+          this.deviceList = this.formatDeviceData(data.data);
           this.activeSearchKeyword = "";
           this.searchKeyword = "";
+          this.selectedDeviceIds = [];
+          this.isAllSelected = false;
         } else {
           this.$message.error(data.msg || '获取设备列表失败');
+        }
+      });
+    },
+
+    // 获取所有设备的方法
+    fetchAllDevices() {
+      this.loading = true;
+      Api.device.getAllDevices(({ data }) => {
+        this.loading = false;
+        if (data.code === 0) {
+          this.allDevicesList = this.formatDeviceData(data.data);
+          this.activeSearchKeyword = "";
+          this.searchKeyword = "";
+          this.selectedDeviceIds = [];
+          this.isAllSelected = false;
+        } else {
+          this.$message.error(data.msg || '获取所有设备列表失败');
+        }
+      });
+    },
+
+    // 格式化设备数据的通用方法
+    formatDeviceData(devices) {
+      return devices.map(device => {
+        const bindDate = new Date(device.createDate);
+        const formattedBindTime = `${bindDate.getFullYear()}-${(bindDate.getMonth() + 1).toString().padStart(2, '0')}-${bindDate.getDate().toString().padStart(2, '0')} ${bindDate.getHours().toString().padStart(2, '0')}:${bindDate.getMinutes().toString().padStart(2, '0')}:${bindDate.getSeconds().toString().padStart(2, '0')}`;
+        let formattedLastConversation = '';
+        if (device.lastConnectedAt) {
+          const lastConvoDate = new Date(device.lastConnectedAt);
+          formattedLastConversation = `${lastConvoDate.getFullYear()}-${(lastConvoDate.getMonth() + 1).toString().padStart(2, '0')}-${lastConvoDate.getDate().toString().padStart(2, '0')} ${lastConvoDate.getHours().toString().padStart(2, '0')}:${lastConvoDate.getMinutes().toString().padStart(2, '0')}:${lastConvoDate.getSeconds().toString().padStart(2, '0')}`;
+        }
+        return {
+          device_id: device.id,
+          model: device.board,
+          firmwareVersion: device.appVersion,
+          macAddress: device.macAddress,
+          bindTime: formattedBindTime,
+          lastConversation: formattedLastConversation,
+          remark: device.alias,
+          isEdit: false,
+          otaSwitch: device.autoUpdate === 1,
+          rawBindTime: new Date(device.createDate).getTime(),
+          agentId: device.agentId
+        };
+      }).sort((a, b) => a.rawBindTime - b.rawBindTime);
+    },
+
+    // 切换显示所有设备/当前智能体设备
+    toggleShowAllDevices() {
+      this.showAllDevices = !this.showAllDevices;
+      if (this.showAllDevices) {
+        this.fetchAllDevices();
+      } else {
+        this.currentPage = 1;
+      }
+      this.selectedDeviceIds = [];
+      this.isAllSelected = false;
+    },
+
+    // 批量迁移设备
+    batchMigrateDevices() {
+      if (this.selectedDeviceIds.length === 0) {
+        this.$message.warning({
+          message: '请至少选择一条记录',
+          showClose: true
+        });
+        return;
+      }
+
+      // 过滤掉已经在当前智能体的设备
+      const devicesToMigrate = this.selectedDevices.filter(device => device.agentId !== this.currentAgentId);
+
+      if (devicesToMigrate.length === 0) {
+        this.$message.warning({
+          message: '选中设备均已在当前智能体，无需迁移',
+          showClose: true
+        });
+        return;
+      }
+
+      // 更新要迁移的设备ID列表
+      const deviceIdsToMigrate = devicesToMigrate.map(device => device.device_id);
+      this.migrateDialogVisible = true;
+    },
+
+    // 确认迁移设备
+    confirmMigrate() {
+      if (this.selectedDeviceIds.length === 0) {
+        this.$message.warning({
+          message: '请至少选择一条记录',
+          showClose: true
+        });
+        return;
+      }
+
+      // 过滤掉已经在当前智能体的设备
+      const devicesToMigrate = this.selectedDevices.filter(device => device.agentId !== this.currentAgentId);
+      const deviceIds = devicesToMigrate.map(device => device.device_id);
+
+      if (deviceIds.length === 0) {
+        this.$message.warning({
+          message: '选中设备均已在当前智能体，无需迁移',
+          showClose: true
+        });
+        this.migrateDialogVisible = false;
+        return;
+      }
+
+      // 发送批量迁移请求
+      Api.device.updateBatchAgentId(this.currentAgentId, deviceIds, ({ data }) => {
+        if (data.code === 0) {
+          this.$message.success({
+            message: `成功迁移 ${deviceIds.length} 台设备到当前智能体`,
+            showClose: true
+          });
+
+          this.migrateDialogVisible = false;
+          this.selectedDeviceIds = [];
+          this.isAllSelected = false;
+
+          // 刷新设备列表
+          if (this.showAllDevices) {
+            this.fetchAllDevices();
+          } else {
+            this.fetchBindDevices(this.currentAgentId);
+          }
+        } else {
+          this.$message.error({
+            message: data.msg || '批量迁移设备失败',
+            showClose: true
+          });
         }
       });
     },
@@ -334,6 +526,32 @@ export default {
       const firmwareType = FIRMWARE_TYPES.find(item => item.key === type);
       return firmwareType ? firmwareType.name : type;
     },
+    // 处理设备选择状态变化
+    handleDeviceSelectionChange(device_id, isSelected) {
+      if (isSelected) {
+        // 添加设备ID到选中列表
+        if (!this.selectedDeviceIds.includes(device_id)) {
+          this.selectedDeviceIds.push(device_id);
+        }
+      } else {
+        // 从选中列表中移除设备ID
+        this.selectedDeviceIds = this.selectedDeviceIds.filter(id => id !== device_id);
+      }
+
+      // 检查当前页是否全选
+      const currentPageIds = this.paginatedDeviceList.map(device => device.device_id);
+      this.isAllSelected = currentPageIds.every(id => this.selectedDeviceIds.includes(id));
+    }
+  },
+  watch: {
+    // 监视 checkbox 变化并更新选中状态
+    paginatedDeviceList: {
+      handler(newVal) {
+        // 这个监视器确保UI上的checkbox状态与selectedDeviceIds保持同步
+        // 主要处理可能的外部变更，例如全选/取消全选
+      },
+      deep: true
+    }
   }
 };
 </script>
@@ -480,12 +698,12 @@ export default {
   flex: 1;
   overflow: hidden;
 }
-  ::v-deep .el-card__body {
-    padding: 15px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    overflow: hidden;
+::v-deep .el-card__body {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
 }
 
 .table_bottom {
@@ -533,6 +751,16 @@ export default {
 
 .ctrl_btn .el-button--danger {
   background: #fd5b63;
+  color: white;
+}
+
+.ctrl_btn .el-button--info {
+  background: #909399;
+  color: white;
+}
+
+.ctrl_btn .el-button--warning {
+  background: #E6A23C;
   color: white;
 }
 
