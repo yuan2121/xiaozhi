@@ -104,6 +104,9 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
             // 获取设备数量
             dto.setDeviceCount(getDeviceCountByAgentId(agent.getId()));
 
+            // 获取chat数量
+            dto.setChatCount(getChatCountByAgentId(agent.getId()));
+
             return dto;
         }).collect(Collectors.toList());
     }
@@ -129,5 +132,28 @@ public class AgentServiceImpl extends BaseServiceImpl<AgentDao, AgentEntity> imp
         }
 
         return deviceCount != null ? deviceCount : 0;
+    }
+
+    @Override
+    public Integer getChatCountByAgentId(String agentId) {
+        if (StringUtils.isBlank(agentId)) {
+            return 0;
+        }
+
+        // 先从Redis中获取
+        Integer cachedCount = (Integer) redisUtils.get(RedisKeys.getAgentChatCountById(agentId));
+        if (cachedCount != null) {
+            return cachedCount;
+        }
+
+        // 如果Redis中没有，则从数据库查询
+        Integer chatCount = agentDao.getChatCountByAgentId(agentId);
+
+        // 将结果存入Redis
+        if (chatCount != null) {
+            redisUtils.set(RedisKeys.getAgentChatCountById(agentId), chatCount, 60);
+        }
+
+        return chatCount != null ? chatCount : 0;
     }
 }

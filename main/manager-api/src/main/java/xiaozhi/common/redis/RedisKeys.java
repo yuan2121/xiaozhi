@@ -63,6 +63,13 @@ public class RedisKeys {
     }
 
     /**
+     * 获取对话数量缓存key
+     */
+    public static String getAgentChatCountById(String id) {
+        return "agent:chat:count:" + id;
+    }
+
+    /**
      * 获取系统配置缓存key
      */
     public static String getServerConfigKey() {
