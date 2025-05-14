@@ -169,7 +169,10 @@ export default {
             const list = Array.isArray(res.data) ? res.data : [];
             this.chatHistory = list.map(chat => ({
               id: chat.id,
-              timestamp: chat.updateDate || new Date().toISOString(),
+              timestamp: chat.createDate
+                  ? new Date(chat.createDate).toISOString()
+                  : new Date().toISOString(),
+
               messageCount: chat.messageCount || 0,
               deviceId: chat.deviceId || '',
               creator: chat.creator || '',
@@ -205,7 +208,9 @@ export default {
                 id: msg.id,
                 sender: msg.role || 'ai',  // 默认值防止空值
                 content: msg.content || '',
-                timestamp: msg.createDate || new Date().toISOString(),
+                //timestamp: msg.createDate || new Date().toISOString(),
+                timestamp: msg.createDate ? new Date(msg.createDate).toISOString() : new Date().toISOString(),
+
                 emoji: msg.emoji || null,
               }));
             } else {

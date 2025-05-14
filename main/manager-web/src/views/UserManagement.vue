@@ -5,7 +5,8 @@
     <div class="operation-bar">
       <h2 class="page-title">用户管理</h2>
       <div class="right-operations">
-        <el-input placeholder="请输入手机号码查询" v-model="searchPhone" class="search-input" clearable
+<!--        <el-input placeholder="请输入手机号码查询" v-model="searchPhone" class="search-input" clearable-->
+        <el-input placeholder="请输入用户名查询" v-model="searchPhone" class="search-input" clearable
           @keyup.enter.native="handleSearch" />
         <el-button class="btn-search" @click="handleSearch">搜索</el-button>
       </div>
@@ -24,7 +25,8 @@
                 </template>
               </el-table-column>
               <el-table-column label="用户Id" prop="userid" align="center"></el-table-column>
-              <el-table-column label="手机号码" prop="mobile" align="center"></el-table-column>
+<!--              <el-table-column label="电话号码" prop="mobile" align="center"></el-table-column>-->
+              <el-table-column label="用户名" prop="mobile" align="center"></el-table-column>
               <el-table-column label="设备数量" prop="deviceCount" align="center"></el-table-column>
               <el-table-column label="状态" prop="status" align="center">
                 <template slot-scope="scope">
@@ -39,6 +41,9 @@
                     @click="handleChangeStatus(scope.row, 0)">禁用账户</el-button>
                   <el-button size="mini" type="text" v-if="scope.row.status === 0"
                     @click="handleChangeStatus(scope.row, 1)">恢复账号</el-button>
+                  <el-button size="mini" type="text" @click="goToStudentDetails(scope)">
+                    学生详情
+                  </el-button>
                   <el-button size="mini" type="text" @click="deleteUser(scope.row)">删除用户</el-button>
                 </template>
               </el-table-column>
@@ -132,6 +137,15 @@ export default {
     },
   },
   methods: {
+
+    //点击进行路由
+    goToStudentDetails(scope) {
+      // 获取当前选中用户的 ID
+      const selectedUserId = scope.row.userid;// 假设每个用户有一个 `userid` 字段
+      // 跳转到学生详情页面，传递 studentId 作为查询参数
+      this.$router.push({ path: '/student-details', query: { studentId: selectedUserId } });
+    },
+
     handlePageSizeChange(val) {
       this.pageSize = val;
       this.currentPage = 1;
