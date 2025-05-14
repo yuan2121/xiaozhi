@@ -92,6 +92,14 @@ const routes = [
       return import("../views/HistoryPage.vue");
     },
   },
+    //新增学生详情页面路由
+  {
+    path: "/student-details",
+    name: "StudentDetails",
+    component: function () {
+      return import("../views/StudentDetails.vue");
+    },
+  }
 ];
 
 const router = new VueRouter({
