@@ -8,6 +8,8 @@ import xiaozhi.modules.conversation.service.ConversationService;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
+import xiaozhi.modules.device.service.DeviceService;
+import xiaozhi.modules.device.service.impl.DeviceServiceImpl;
 
 import java.util.HashMap;
 import java.util.List;
@@ -18,11 +20,16 @@ import java.util.Map;
 public class ConversationController {
     @Autowired
     private ConversationService conversationService;
+    @Autowired
+    private DeviceService deviceService;
 
     // 增
     @Operation(summary = "新增会话")
     @PostMapping("/add")
     public String add(@RequestBody ConversationDto conversation) {
+        String id = deviceService.getAgentIdByDeviceId(conversation.getDeviceId());
+        conversation.setAgentId(id);
+        System.out.println("--------------------------------------\nconversation: " + conversation);
         conversationService.add(conversation);
         return "success!";
     }

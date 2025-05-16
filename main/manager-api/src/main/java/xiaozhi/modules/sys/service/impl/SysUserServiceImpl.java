@@ -1,11 +1,9 @@
 package xiaozhi.modules.sys.service.impl;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
+import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -34,6 +32,8 @@ import xiaozhi.modules.sys.service.SysParamsService;
 import xiaozhi.modules.sys.service.SysUserService;
 import xiaozhi.modules.sys.vo.AdminPageUserVO;
 
+import org.springframework.beans.BeanUtils;
+
 /**
  * 系统用户
  */
@@ -59,6 +59,33 @@ public class SysUserServiceImpl extends BaseServiceImpl<SysUserDao, SysUserEntit
         SysUserEntity entity = users.getFirst();
         return ConvertUtils.sourceToTarget(entity, SysUserDTO.class);
     }
+
+    @Override
+    public List<SysUserDTO> getByUserIds(List<Long> userIds) {
+        // 创建 QueryWrapper
+        QueryWrapper<SysUserEntity> wrapper = new QueryWrapper<>();
+
+        // 构造 in 条件
+        if (userIds != null && !userIds.isEmpty()) {
+            wrapper.in("id", userIds);
+        } else {
+            // 为空则直接返回空列表或你可以抛异常
+            return new ArrayList<>();
+        }
+
+        // 查询
+        List<SysUserEntity> users = sysUserDao.selectList(wrapper);
+
+        // 转换为 DTO
+        return users.stream().map(user -> {
+            SysUserDTO dto = new SysUserDTO();
+            BeanUtils.copyProperties(user, dto);
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+
+
 
     @Override
     public SysUserDTO getByUserId(Long userId) {

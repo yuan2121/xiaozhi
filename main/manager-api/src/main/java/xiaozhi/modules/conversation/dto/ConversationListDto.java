@@ -18,6 +18,6 @@ public class ConversationListDto {
     /** 代理/机器人 ID */
     private String id;
     private String agentId;
-    private Date updateDate;
+    private Date createDate;
     private int messageCount;
 }

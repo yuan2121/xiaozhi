@@ -41,9 +41,6 @@ public class SummaryController {
         return summaryDto; // 返回 SummaryDto
     }
 
-
-
-
     // 更新摘要内容
     @Operation(summary = "更新摘要内容")
     @PutMapping("/update/{chatId}")
