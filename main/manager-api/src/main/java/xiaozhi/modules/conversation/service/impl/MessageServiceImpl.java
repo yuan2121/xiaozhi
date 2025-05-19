@@ -82,7 +82,7 @@ public class MessageServiceImpl extends BaseServiceImpl<MessageDao, MessageEntit
             wrapper.eq("chat_id", params.get("chatId"));
         }
 
-        // 按 update_date 字段倒序排列
+        // 按 create_date 字段倒序排列
         wrapper.orderByAsc("create_date");
 
         // 执行查询

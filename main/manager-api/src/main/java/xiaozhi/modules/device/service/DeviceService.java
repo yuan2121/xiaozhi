@@ -77,6 +77,14 @@ public interface DeviceService extends BaseService<DeviceEntity> {
     DeviceEntity getDeviceByMacAddress(String macAddress);
 
     /**
+     * 根据MAC地址获取AgentId
+     *
+     * @param id deviceId
+     * @return AgentId
+     */
+    String getAgentIdByDeviceId(String id);
+
+    /**
      * 根据设备ID获取激活码
      * 
      * @param deviceId 设备ID
