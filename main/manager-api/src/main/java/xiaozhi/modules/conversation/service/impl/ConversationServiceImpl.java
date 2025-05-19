@@ -10,6 +10,8 @@ import xiaozhi.modules.conversation.dto.ConversationDto;
 import xiaozhi.modules.conversation.dto.ConversationListDto;
 import xiaozhi.modules.conversation.entity.ConversationEntity;
 import xiaozhi.modules.conversation.service.ConversationService;
+import xiaozhi.modules.device.service.DeviceService;
+import xiaozhi.modules.device.service.impl.DeviceServiceImpl;
 
 import java.util.List;
 import java.util.Map;
@@ -21,10 +23,13 @@ public class ConversationServiceImpl extends BaseServiceImpl<ConversationDao, Co
     @Autowired
     private ConversationDao conversationDao;
 
+
     @Override
     public String add(ConversationDto conversation) {
         ConversationEntity conversationEntity = new ConversationEntity();
         BeanUtils.copyProperties(conversation, conversationEntity);
+
+
         int rows = conversationDao.insert(conversationEntity);
         if (rows <= 0) {
             throw new RuntimeException("新增会话失败");
@@ -64,7 +69,7 @@ public class ConversationServiceImpl extends BaseServiceImpl<ConversationDao, Co
             wrapper.eq("agent_id", params.get("agentId"));
         }
         // 按 create_date 倒序
-        wrapper.orderByDesc("update_date");
+        wrapper.orderByDesc("create_date");
         List<ConversationEntity> entities = conversationDao.selectList(wrapper);
         return entities.stream().map(entity -> {
             ConversationListDto dto = new ConversationListDto();

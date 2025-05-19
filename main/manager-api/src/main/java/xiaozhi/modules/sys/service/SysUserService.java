@@ -8,6 +8,8 @@ import xiaozhi.modules.sys.dto.SysUserDTO;
 import xiaozhi.modules.sys.entity.SysUserEntity;
 import xiaozhi.modules.sys.vo.AdminPageUserVO;
 
+import java.util.List;
+
 /**
  * 系统用户
  */
@@ -16,6 +18,8 @@ public interface SysUserService extends BaseService<SysUserEntity> {
     SysUserDTO getByUsername(String username);
 
     SysUserDTO getByUserId(Long userId);
+
+    List<SysUserDTO> getByUserIds(List<Long> userIds);
 
     void save(SysUserDTO dto);
 
