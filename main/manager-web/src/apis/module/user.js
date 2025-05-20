@@ -138,4 +138,101 @@ export default {
                 });
             }).send();
     },
+    // getStudentName(userId, param2, param3) {
+    //
+    // },
+    getAdviceList(userId, callback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/conversation/advice/list/user/${userId}`) // 使用传递的 userId 作为 URL 参数
+            .method('GET')
+            .success((res) => {
+                // 请求成功，清理请求时间，并调用回调函数
+                RequestService.clearRequestTime();
+                callback(res);  // 将响应数据传递给回调函数
+            })
+            .fail((err) => {
+                // 请求失败，输出错误信息并重试请求
+                console.error('接口请求失败:', err);
+                RequestService.reAjaxFun(() => {
+                    this.getAdviceList(userId, callback);  // 重试调用 getAdviceList
+                });
+            })
+            .send();
+    },
+    getUser(userId,callback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/users/getUser/${userId}`) // 使用传递的 userId 作为 URL 参数
+            .method('GET')
+            .success((res) => {
+                // 请求成功，清理请求时间，并调用回调函数
+                RequestService.clearRequestTime();
+                callback(res);  // 将响应数据传递给回调函数
+            })
+            .fail((err) => {
+                // 请求失败，输出错误信息并重试请求
+                console.error('接口请求失败:', err);
+                RequestService.reAjaxFun(() => {
+                    this.getUser(callback);  // 重试调用 getUser
+                });
+            })
+            .send();
+    },
+
+// 获取用户信息列表
+    getUserList(userIds, callback) {
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/users/getUsers`)  // 请求的 URL
+            .method('POST')  // 使用 POST 方法
+            .data(userIds)  // 将 userIds 发送到服务器
+            .success((res) => {
+                RequestService.clearRequestTime();  // 清理请求时间
+                callback(res);  // 请求成功后调用回调函数，返回用户信息列表
+            })
+            .fail((err) => {
+                console.error('获取用户信息失败:', err);  // 输出错误信息
+                this.$message.error(err.msg || '获取用户信息失败');  // 弹出错误提示
+                // 如果请求失败，重试请求
+                RequestService.reAjaxFun(() => {
+                    this.getUserList(userIds, callback);  // 重试请求
+                });
+            })
+            .send();  // 发送请求
+    },
+
+    apisubmitAdvice(adviceData, callback) {
+        // 获取当前时间，并移除时区（去掉 'Z' 字符）
+
+        // 获取当前时间，并调整为北京时间
+        const currentDate = new Date();
+        const beijingDate = new Date(currentDate.getTime() + (8 * 60 * 60 * 1000)).toISOString().replace('T', ' ').slice(0, 19);  //  转换为北京时间 (UTC + 8小时)格式：YYYY-MM-DD HH:mm:ss
+
+        // 设置请求数据
+        const postData = {
+            content: adviceData.content,        // 建议内容
+            teacherId: adviceData.teacher_id,  // 教师ID
+            studentId: adviceData.user_id,        // 学生ID
+            createDate: beijingDate,            // 当前时间，表示创建时间
+        };
+
+        // 发送请求
+        RequestService.sendRequest()
+            .url(`${getServiceUrl()}/conversation/advice/add`)  // 请求的 URL
+            .method('POST')  // 使用 POST 方法
+            .data(postData)  // 将请求数据发送到服务器
+            .success((res) => {
+                RequestService.clearRequestTime();  // 清理请求时间
+                callback(res);
+            })
+            .fail((err) => {
+                console.error('提交学习建议失败:', err);  // 输出错误信息
+                this.$message.error(err.msg || '提交学习建议失败');  // 弹出错误提示
+                // 如果请求失败，重试请求
+                RequestService.reAjaxFun(() => {
+                    this.apisubmitAdvice(adviceData, callback);  // 重试请求
+                });
+            })
+            .send();  // 发送请求
+    },
+
+
 }
